@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FB Contacts">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+<title>Ferenc Bodor — Contacts</title>
+<style>
+  :root {
+    --bg:#0d0d0d; --bg2:#141414; --bg3:#1c1c1c; --bg4:#242424;
+    --border:#2a2a2a; --text:#f0f0f0; --text2:#888; --text3:#555;
+    --red:#e05555; --green:#4caf7d; --yellow:#e0b255;
+    --blue:#5588e0; --purple:#9b6fe0; --orange:#e07a35;
+    --font:'Helvetica Neue',Arial,sans-serif; --radius:8px;
+    --safe-bottom:env(safe-area-inset-bottom,0px);
+    --safe-top:env(safe-area-inset-top,0px);
+    --topbar-h:64px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html{overflow-x:hidden;width:100%}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;overscroll-behavior:none;overflow-x:hidden;width:100%}
+
+  /* ── LAYOUT ── */
+  .app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:var(--topbar-h) 1fr;height:100vh;overflow:hidden}
+  .topbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:0 24px;background:var(--bg2);border-bottom:1px solid var(--border);padding-top:var(--safe-top);height:calc(var(--topbar-h) + var(--safe-top))}
+  .sidebar{background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:20px 0}
+  .main{overflow-y:auto;overflow-x:hidden;padding:24px;-webkit-overflow-scrolling:touch}
+
+  /* ── TOPBAR ── */
+  .logo{font-size:13px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;white-space:nowrap}
+  .logo span{color:var(--text2);font-weight:400}
+  .search-wrap{flex:1;max-width:420px;position:relative}
+  .search-wrap input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:9px 14px 9px 36px;color:var(--text);font-size:14px;outline:none;-webkit-appearance:none}
+  .search-wrap input::placeholder{color:var(--text3)}
+  .search-wrap input:focus{border-color:#444}
+  .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;width:15px;height:15px}
+  .topbar-actions{display:flex;align-items:center;gap:8px}
+  .btn{padding:9px 18px;border-radius:var(--radius);border:none;cursor:pointer;font-size:13px;font-family:var(--font);font-weight:500;transition:opacity .15s;touch-action:manipulation;line-height:1}
+  .btn:active{opacity:.7}
+  .btn-primary{background:var(--text);color:#000}
+  .btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+  .btn-danger{background:var(--red);color:#fff}
+  .btn-sm{padding:6px 12px;font-size:12px}
+  .count-badge{background:var(--bg4);color:var(--text2);font-size:12px;padding:3px 9px;border-radius:20px;margin-left:auto}
+
+  /* ── SIDEBAR ── */
+  .sidebar-section{padding:0 14px 18px}
+  .sidebar-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);padding:0 8px 10px}
+  .filter-btn{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border-radius:var(--radius);border:none;background:transparent;color:var(--text2);cursor:pointer;font-size:13px;font-family:var(--font);text-align:left;transition:background .1s,color .1s;touch-action:manipulation}
+  .filter-btn:hover{background:var(--bg3);color:var(--text)}
+  .filter-btn.active{background:var(--bg4);color:var(--text)}
+  .filter-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .filter-count{margin-left:auto;font-size:11px;color:var(--text3)}
+  .sidebar-divider{height:1px;background:var(--border);margin:6px 14px 18px}
+
+  /* ── ALERTS ── */
+  .followup-alert{background:#1a1200;border:1px solid #3a2800;border-radius:var(--radius);padding:13px 16px;margin-bottom:18px;display:none}
+  .followup-alert.visible{display:block}
+  .followup-alert h4{font-size:11px;font-weight:600;color:var(--yellow);letter-spacing:.08em;text-transform:uppercase;margin-bottom:9px}
+  .followup-names{display:flex;flex-wrap:wrap;gap:6px}
+  .followup-chip{background:#2a1e00;border:1px solid #3a2800;border-radius:20px;padding:4px 11px;font-size:12px;color:var(--yellow);cursor:pointer;touch-action:manipulation}
+  .same-company-warning{background:#1a0a00;border:1px solid #3a1800;border-radius:var(--radius);padding:11px 14px;margin-bottom:14px;display:none;font-size:12px;color:var(--orange);gap:8px;align-items:flex-start}
+  .same-company-warning.visible{display:flex}
+
+  /* ── SECTION HEADER ── */
+  .view-toggle{display:flex;gap:4px}
+  .view-btn{background:transparent;border:1px solid var(--border);color:var(--text3);border-radius:var(--radius);padding:6px 11px;cursor:pointer;font-size:12px;touch-action:manipulation}
+  .view-btn.active{background:var(--bg4);color:var(--text);border-color:#444}
+  .section-header{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+  .section-title{font-size:13px;font-weight:600;color:var(--text2);letter-spacing:.08em;text-transform:uppercase}
+
+  /* ── CARDS ── */
+  .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:14px;width:100%;min-width:0}
+  .contact-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:22px;cursor:pointer;transition:border-color .15s,background .15s;position:relative;touch-action:manipulation;min-width:0;overflow:hidden}
+  .contact-card:active{background:var(--bg3);border-color:#444}
+  @media(hover:hover){.contact-card:hover{border-color:#444;background:var(--bg3)}}
+  .card-top{display:flex;align-items:center;gap:16px;margin-bottom:0}
+  .card-info{flex:1;min-width:0}
+  .card-status-col{flex-shrink:0;display:flex;align-items:center}
+  .card-avatar-wrap{flex-shrink:0;flex-grow:0}
+  .card-avatar{position:relative;width:46px;height:46px;min-width:46px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--text2)}
+  .card-star-badge{position:absolute;bottom:-3px;right:-3px;width:20px;height:20px;border-radius:50%;background:var(--yellow);border:2px solid var(--bg2);display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;color:#000;z-index:1}
+  .card-name{font-size:16px;font-weight:600;margin-bottom:3px}
+  .card-role{font-size:13px;color:var(--text2)}
+  .card-company{font-size:13px;color:var(--text3);margin-top:2px}
+  .tag{font-size:12px;padding:4px 10px;border-radius:20px;font-weight:500}
+  .tag-status{border:1px solid;min-width:90px;text-align:center;display:inline-block}
+  .tag-city{background:var(--bg4);color:var(--text3)}
+  .card-followup{font-size:11px;color:var(--yellow);margin-top:5px}
+  .card-followup.overdue{color:var(--red)}
+
+  /* ── TABLE ── */
+  .contacts-table{width:100%;border-collapse:collapse}
+  .contacts-table th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:9px 13px;border-bottom:1px solid var(--border);white-space:nowrap}
+  .contacts-table td{padding:11px 13px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+  .contacts-table tr:last-child td{border-bottom:none}
+  .contacts-table tr:active td{background:var(--bg3)}
+  @media(hover:hover){.contacts-table tr:hover td{background:var(--bg3);cursor:pointer}}
+
+  /* ── STATUS ── */
+  .status-to-contact  { color:var(--text3); border-color:var(--border); background:transparent; }
+  .status-contacted   { color:rgba(235,235,245,0.55); border-color:rgba(235,235,245,0.2); background:rgba(255,255,255,0.04); }
+  .status-talking     { color:var(--blue); border-color:var(--blue); background:rgba(85,136,224,.10); }
+  .status-booked      { color:var(--green); border-color:var(--green); background:rgba(76,175,125,.10); }
+  .status-cold        { color:var(--text3); border-color:transparent; background:var(--bg4); opacity:0.6; }
+  .status-network     { color:rgba(191,90,242,0.8); border-color:rgba(191,90,242,0.3); background:rgba(191,90,242,0.07); }
+  .status-past-collab { color:rgba(64,200,224,0.8); border-color:rgba(64,200,224,0.3); background:rgba(64,200,224,0.07); }
+  .status-crew        { color:var(--text2); border-color:var(--border); background:transparent; }
+
+  /* ── OVERLAY / MODAL BASE ── */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:100;display:none;align-items:flex-end;justify-content:center}
+  .overlay.open{display:flex}
+  @keyframes slideUp{from{transform:translateY(28px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:14px 14px 0 0;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:var(--safe-bottom);animation:slideUp .22s ease}
+  .modal-drag{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 22px 0;margin-bottom:18px}
+  .modal-title{font-size:17px;font-weight:600}
+  .modal-close{background:transparent;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1;padding:4px 8px;touch-action:manipulation}
+  .modal-close:hover{color:var(--text)}
+  .modal-body{padding:0 22px 22px}
+  .modal-footer{display:flex;gap:8px;padding:14px 22px;border-top:1px solid var(--border)}
+  .modal-footer .btn-danger{margin-right:auto}
+  .modal-footer .btn:not(.btn-danger){flex:1;text-align:center;padding:12px 14px}
+
+  /* ── DETAIL VIEW ── */
+  .detail-header{display:flex;align-items:center;gap:16px;margin-bottom:22px}
+  .detail-avatar{width:56px;height:56px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;color:var(--text2);flex-shrink:0}
+  .detail-name{font-size:20px;font-weight:700;line-height:1.2;margin-bottom:3px}
+  .detail-sub{font-size:13px;color:var(--text2)}
+  .detail-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;margin-bottom:22px}
+  .detail-section{margin-bottom:20px}
+  .detail-section-title{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+  .detail-rows{display:flex;flex-direction:column;gap:0}
+  .detail-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .detail-row:last-child{border-bottom:none}
+  .detail-row-icon{width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3)}
+  .detail-row-icon svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.5}
+  .detail-row-label{font-size:11px;color:var(--text3);width:90px;flex-shrink:0}
+  .detail-row-value{font-size:13px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .detail-row-value a{color:var(--blue);text-decoration:none;overflow:hidden;text-overflow:ellipsis;display:block}
+  .detail-row-value a:hover{text-decoration:underline}
+  .detail-notes-box{background:var(--bg3);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap}
+
+  /* ── EDIT FORM ── */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .form-group{display:flex;flex-direction:column;gap:7px}
+  .form-group.full{grid-column:1/-1}
+  .form-group label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)}
+  .form-group input,.form-group select,.form-group textarea{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:11px 13px;color:var(--text);font-size:16px;font-family:var(--font);outline:none;-webkit-appearance:none}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#555}
+  .form-group textarea{resize:vertical;min-height:80px;font-size:14px}
+  .form-group select option{background:var(--bg3)}
+  .email-link-wrap{position:relative}
+  .email-link-wrap input{padding-right:40px}
+  .email-mailto{position:absolute;right:9px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;touch-action:manipulation}
+  .email-mailto:hover{color:var(--blue)}
+  .email-mailto svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5}
+
+  /* ── CUSTOM CHECKBOX / TOGGLE ── */
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-top:1px solid var(--border);margin-top:4px}
+  .toggle-label{display:flex;flex-direction:column;gap:3px}
+  .toggle-label span:first-child{font-size:14px;color:var(--text);font-weight:500}
+  .toggle-label span:last-child{font-size:12px;color:var(--text3)}
+  .toggle{position:relative;width:46px;height:26px;flex-shrink:0}
+  .toggle input{opacity:0;width:0;height:0;position:absolute}
+  .toggle-track{position:absolute;inset:0;background:var(--bg4);border:1px solid var(--border);border-radius:13px;transition:background .2s,border-color .2s;cursor:pointer}
+  .toggle input:checked + .toggle-track{background:var(--purple);border-color:var(--purple)}
+  .toggle-thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s;pointer-events:none}
+  .toggle input:checked ~ .toggle-thumb{transform:translateX(20px)}
+
+  /* ── OUTREACH ── */
+  .outreach-section{margin-top:22px;padding-top:22px;border-top:1px solid var(--border)}
+  .outreach-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:13px}
+  .log-entry{display:flex;gap:12px;align-items:flex-start;margin-bottom:11px}
+  .log-date{font-size:11px;color:var(--text3);white-space:nowrap;padding-top:2px;min-width:70px}
+  .log-text{font-size:13px;color:var(--text2);flex:1;line-height:1.45}
+  .log-add{display:flex;gap:8px;margin-top:10px}
+  .log-add input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:11px 13px;color:var(--text);font-size:16px;font-family:var(--font);outline:none;-webkit-appearance:none}
+  .log-add input:focus{border-color:#555}
+  .followup-suggest{display:none;background:#0d1a0d;border:1px solid #1a3a1a;border-radius:var(--radius);padding:11px 14px;margin-top:11px;font-size:12px;color:var(--green);align-items:center;gap:10px;flex-wrap:wrap}
+  .followup-suggest.visible{display:flex}
+  .followup-suggest .fs-set{background:var(--green);color:#000;border:none;border-radius:4px;padding:4px 11px;font-size:11px;font-weight:600;cursor:pointer;touch-action:manipulation}
+  .followup-suggest .fs-dismiss{background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;touch-action:manipulation}
+
+  /* ── MISC ── */
+  .empty{text-align:center;padding:60px 20px;color:var(--text3)}
+  .empty h3{font-size:16px;color:var(--text2);margin-bottom:8px}
+  .empty p{font-size:13px;line-height:1.6}
+  ::-webkit-scrollbar{width:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+  .toast{position:fixed;bottom:calc(22px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(16px);background:#222;border:1px solid #444;color:var(--text);padding:10px 20px;border-radius:20px;font-size:13px;z-index:600;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;white-space:nowrap}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #dataMenu{position:fixed;background:var(--bg3);border:1px solid var(--border);border-radius:10px;min-width:190px;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.6);z-index:400;display:none}
+  #dataMenu button,#dataMenu label{display:block;width:100%;padding:11px 16px;background:none;border:none;color:var(--text);font-size:13px;text-align:left;cursor:pointer;font-family:var(--font)}
+  #dataMenu button:hover,#dataMenu label:hover{background:var(--bg4)}
+  #dataMenuBack{position:fixed;inset:0;z-index:399;display:none}
+  .mobile-nav{display:none}
+
+  /* search bar hidden on desktop, shown on mobile */
+  .mobile-search-bar { display: none; }
+
+  @media(max-width:700px){
+    :root{ --nav-h:62px; --search-h:64px; }
+  }
+
+  /* ── MOBILE ── */
+  @media(max-width:700px){
+    .app{ grid-template-columns:1fr; grid-template-rows:calc(52px + var(--safe-top)) 1fr; }
+    .topbar{ height:calc(52px + var(--safe-top)); padding:0 14px; padding-top:calc(var(--safe-top) + 10px); gap:10px; }
+    .logo{ display:none; }
+    .topbar .search-wrap{ display:none; }
+    .sidebar{ display:none; }
+    /* bottom padding = nav + search + safe + small gap */
+    .main{ padding:12px 10px calc(130px + var(--safe-bottom)); overflow-x:hidden; }
+
+    /* ── SEARCH BAR — fixed just above nav bar ── */
+    .mobile-search-bar{
+      display:block;
+      position:fixed;
+      bottom:calc(62px + var(--safe-bottom));
+      left:0; right:0; z-index:49;
+      background:var(--bg2);
+      border-top:1px solid var(--border);
+      padding:12px 14px;
+    }
+    .mobile-search-bar .search-inner{ position:relative; }
+    .mobile-search-bar input{
+      width:100%; background:var(--bg3); border:1px solid var(--border);
+      border-radius:12px; padding:12px 14px 12px 40px;
+      color:var(--text); font-size:16px; font-family:var(--font);
+      outline:none; -webkit-appearance:none;
+    }
+    .mobile-search-bar input::placeholder{ color:var(--text3); }
+    .mobile-search-bar input:focus{ border-color:#555; }
+    .mobile-search-bar .search-icon{
+      position:absolute; left:13px; top:50%; transform:translateY(-50%);
+      color:var(--text3); pointer-events:none; width:17px; height:17px;
+    }
+
+    .cards-grid{
+      grid-template-columns:1fr; gap:0;
+      background:var(--bg2); border:1px solid var(--border);
+      border-radius:12px; overflow:hidden;
+      width:100%;
+    }
+    .contact-card{
+      border:none; border-radius:0;
+      border-bottom:1px solid var(--border);
+      padding:16px 14px;
+      display:flex; align-items:center; gap:12px;
+      min-height:88px; width:100%; overflow:hidden;
+    }
+    .contact-card:last-child{ border-bottom:none; }
+    .card-top{ display:flex; align-items:center; gap:12px; min-width:0; width:100%; }
+    .card-avatar-wrap{ flex-shrink:0; flex-grow:0; }
+    .card-avatar{ position:relative; width:48px; height:48px; min-width:48px; font-size:17px; border-radius:50%; }
+    .card-info{ flex:1; min-width:0; overflow:hidden; }
+    .card-status-col{ flex-shrink:0; }
+    .card-name{ font-size:16px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .card-role{ font-size:13px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .card-company{ font-size:13px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .card-followup{ font-size:11px; margin-top:4px; }
+    .tag{ font-size:11px; padding:3px 8px; min-width:80px; }
+
+    /* Section header */
+    .section-title{ font-size:15px; }
+    .count-badge{ font-size:13px; }
+    .section-header{ margin-bottom:14px; }
+    .view-btn{ padding:7px 12px; }
+
+    /* Forms */
+    .form-grid{ grid-template-columns:1fr; }
+    .form-group input,.form-group select,.form-group textarea{ font-size:16px; padding:13px 14px; border-radius:10px; }
+    .form-group label{ font-size:12px; }
+    .toggle-row{ padding:16px 0; }
+    .toggle-label span:first-child{ font-size:16px; }
+    .toggle-label span:last-child{ font-size:13px; }
+
+    /* Detail view */
+    .detail-name{ font-size:22px; }
+    .detail-sub{ font-size:14px; }
+    .detail-avatar{ width:64px; height:64px; font-size:22px; }
+    .detail-row{ padding:13px 0; }
+    .detail-row-label{ font-size:12px; width:100px; }
+    .detail-row-value{ font-size:15px; }
+    .detail-notes-box{ font-size:14px; padding:14px; }
+
+    /* Log */
+    .log-date{ font-size:12px; min-width:78px; }
+    .log-text{ font-size:14px; }
+    .log-add input{ font-size:16px; padding:13px 14px; border-radius:10px; }
+
+    /* Modal */
+    .modal{ border-radius:20px 20px 0 0; max-height:96vh; }
+    .modal-header{ padding:18px 20px 0; }
+    .modal-title{ font-size:18px; }
+    .modal-body{ padding:0 20px 20px; }
+    .modal-footer{ padding:14px 20px; gap:10px; }
+    .modal-footer .btn:not(.btn-danger){ padding:14px; font-size:15px; }
+    .modal-footer .btn-danger{ font-size:14px; padding:10px 14px; }
+    #dataMenu{ right:12px; }
+
+    /* Bottom nav */
+    .mobile-nav{
+      display:flex; position:fixed; bottom:0; left:0; right:0;
+      background:var(--bg2); border-top:1px solid var(--border);
+      z-index:50; padding-bottom:var(--safe-bottom);
+      align-items:flex-start;
+    }
+    .nav-btn{
+      flex:1; display:flex; flex-direction:column; align-items:center; gap:5px;
+      padding:12px 4px 10px; border:none; background:transparent;
+      color:var(--text3); font-size:11px; font-family:var(--font);
+      cursor:pointer; touch-action:manipulation; transition:color .15s;
+    }
+    .nav-btn.active{ color:var(--text); }
+    .nav-btn svg{ width:24px; height:24px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+    .nav-btn-add{
+      background:var(--text); border-radius:14px;
+      width:44px; height:30px; display:flex; align-items:center; justify-content:center;
+    }
+    .nav-btn-add svg{ stroke:#000; width:20px; height:20px; stroke-width:2.2; }
+
+    /* Filter drawer — opens above search+nav */
+    .filter-drawer{ position:fixed; inset:0; z-index:90; display:none; }
+    .filter-drawer.open{ display:block; }
+    .filter-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.65); }
+    .filter-panel{
+      position:absolute; bottom:0; left:0; right:0;
+      background:var(--bg2); border-radius:20px 20px 0 0;
+      padding:0 0 calc(130px + var(--safe-bottom));
+      max-height:90vh; overflow-y:auto; animation:slideUp .22s ease;
+    }
+    .filter-panel-drag{ width:36px; height:4px; background:var(--border); border-radius:2px; margin:14px auto 8px; }
+    .fp-label{ font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--text3); padding:12px 18px 6px; }
+    .filter-panel .filter-btn{ padding:14px 18px; font-size:15px; border-radius:0; min-height:52px; }
+    .filter-panel .filter-dot{ width:9px; height:9px; }
+    .filter-panel .filter-count{ font-size:13px; }
+
+    /* Table — hide non-essential columns, prevent overflow */
+    #tableView{ width:100%; table-layout:fixed; }
+    .contacts-table th, .contacts-table td{ white-space:normal; padding:10px 8px; font-size:13px; }
+    .contacts-table th:nth-child(3),
+    .contacts-table td:nth-child(3),
+    .contacts-table th:nth-child(4),
+    .contacts-table td:nth-child(4),
+    .contacts-table th:nth-child(6),
+    .contacts-table td:nth-child(6),
+    .contacts-table th:nth-child(7),
+    .contacts-table td:nth-child(7){ display:none; }
+    .contacts-table th:nth-child(1),
+    .contacts-table td:nth-child(1){ width:50%; }
+    .contacts-table th:nth-child(2),
+    .contacts-table td:nth-child(2){ width:30%; }
+    .contacts-table th:nth-child(5),
+    .contacts-table td:nth-child(5){ width:20%; }
+    .contacts-table td:nth-child(5) .tag{ font-size:10px; padding:2px 6px; white-space:nowrap; display:inline-block; min-width:68px; text-align:center; }
+    .followup-alert{ padding:14px 16px; margin-bottom:14px; }
+    .followup-alert h4{ font-size:12px; margin-bottom:10px; }
+    .followup-chip{ font-size:13px; padding:5px 13px; }
+
+    /* Toast — above search bar */
+    .toast{ bottom:calc(130px + var(--safe-bottom) + 12px); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="logo">Ferenc Bodor <span>/ Contacts</span></div>
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="12.5" y1="12.5" x2="17" y2="17"/></svg>
+      <input type="text" id="searchInput" placeholder="Search…" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-primary" onclick="openEditModal(null)" style="white-space:nowrap">+ Add</button>
+      <button class="btn btn-ghost btn-sm" id="dataMenuBtn" onclick="showDataMenu()">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Views</div>
+      <button class="filter-btn active" onclick="setFilter('all',this)">All Contacts <span class="filter-count" id="count-all">0</span></button>
+      <button class="filter-btn" onclick="setFilter('multiplicator',this)">
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><polygon points="10,2 12.5,7.5 18.5,8.3 14.2,12.4 15.4,18.4 10,15.4 4.6,18.4 5.8,12.4 1.5,8.3 7.5,7.5"/></svg>
+        Multiplicators <span class="filter-count" id="count-multi">0</span>
+      </button>
+      <button class="filter-btn" onclick="setFilter('followup',this)">
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 2a6 6 0 0 1 6 6c0 4-6 10-6 10S4 12 4 8a6 6 0 0 1 6-6z"/><circle cx="10" cy="8" r="1.5" fill="currentColor" stroke="none"/></svg>
+        Follow-up Due <span class="filter-count" id="count-followup">0</span>
+      </button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Status</div>
+      <button class="filter-btn" onclick="setFilter('status:to-contact',this)"><span class="filter-dot" style="background:var(--text3)"></span>To Contact <span class="filter-count" id="count-to-contact">0</span></button>
+      <button class="filter-btn" onclick="setFilter('status:contacted',this)"><span class="filter-dot" style="background:rgba(235,235,245,0.35)"></span>Contacted <span class="filter-count" id="count-contacted">0</span></button>
+      <button class="filter-btn" onclick="setFilter('status:talking',this)"><span class="filter-dot" style="background:var(--blue)"></span>Talking <span class="filter-count" id="count-talking">0</span></button>
+      <button class="filter-btn" onclick="setFilter('status:booked',this)"><span class="filter-dot" style="background:var(--green)"></span>Booked <span class="filter-count" id="count-booked">0</span></button>
+      <button class="filter-btn" onclick="setFilter('status:cold',this)"><span class="filter-dot" style="background:var(--border)"></span>Cold <span class="filter-count" id="count-cold">0</span></button>
+      <button class="filter-btn" onclick="setFilter('status:network',this)"><span class="filter-dot" style="background:rgba(191,90,242,0.7)"></span>Network <span class="filter-count" id="count-network">0</span></button>
+      <button class="filter-btn" onclick="setFilter('status:past-collab',this)"><span class="filter-dot" style="background:rgba(64,200,224,0.7)"></span>Past Collab <span class="filter-count" id="count-past-collab">0</span></button>
+      <button class="filter-btn" onclick="setFilter('status:crew',this)"><span class="filter-dot" style="background:var(--text2)"></span>Crew <span class="filter-count" id="count-crew">0</span></button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">City</div>
+      <div id="cityFilters"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Role</div>
+      <div id="roleFilters"></div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section" style="display:flex;flex-direction:column;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="exportCSV()" style="width:100%">Export CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportJSON()" style="width:100%">Backup JSON</button>
+      <label class="btn btn-ghost btn-sm" style="width:100%;cursor:pointer;text-align:center">Restore JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none"></label>
+    </div>
+  </div>
+
+  <div class="main">
+    <div id="followupAlert" class="followup-alert">
+      <h4>Follow-up Due</h4>
+      <div class="followup-names" id="followupNames"></div>
+    </div>
+    <div class="section-header">
+      <span class="section-title" id="sectionTitle">All Contacts</span>
+      <span class="count-badge" id="visibleCount">0</span>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <div class="view-toggle">
+          <button class="view-btn active" onclick="setView('cards',this)">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="1"/><rect x="11" y="2" width="7" height="7" rx="1"/><rect x="2" y="11" width="7" height="7" rx="1"/><rect x="11" y="11" width="7" height="7" rx="1"/></svg>
+          </button>
+          <button class="view-btn" onclick="setView('table',this)">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="2" y1="5" x2="18" y2="5"/><line x1="2" y1="10" x2="18" y2="10"/><line x1="2" y1="15" x2="18" y2="15"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="cardsView" class="cards-grid"></div>
+    <table id="tableView" class="contacts-table" style="display:none">
+      <thead><tr><th>Name</th><th>Role</th><th>Company</th><th>City</th><th>Status</th><th>Follow-up</th><th></th></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div id="emptyState" class="empty" style="display:none">
+      <h3>No contacts found</h3>
+      <p>Try a different filter, or add a new contact.</p>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE SEARCH BAR -->
+<div class="mobile-search-bar">
+  <div class="search-inner">
+    <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8.5" cy="8.5" r="5.5"/><line x1="12.5" y1="12.5" x2="17" y2="17"/></svg>
+    <input type="text" id="mobileSearchInput" placeholder="Search…" autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+</div>
+
+<!-- MOBILE BOTTOM NAV -->
+<div class="mobile-nav">
+  <button class="nav-btn active" id="nav-all" onclick="mobileNav('all',this)" style="position:relative">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>All</span>
+  </button>
+  <button class="nav-btn" id="nav-followup" onclick="mobileNav('followup',this)" style="position:relative">
+    <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <span id="nav-fu-label">Follow-up</span>
+  </button>
+  <button class="nav-btn" onclick="openEditModal(null)">
+    <div class="nav-btn-add">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+    <span>Add</span>
+  </button>
+  <button class="nav-btn" id="nav-multi" onclick="mobileNav('multiplicator',this)">
+    <svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+    <span>Stars</span>
+  </button>
+  <button class="nav-btn" onclick="openFilterDrawer()">
+    <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    <span>Filter</span>
+  </button>
+</div>
+
+<!-- MOBILE FILTER DRAWER -->
+<div class="filter-drawer" id="filterDrawer">
+  <div class="filter-backdrop" onclick="closeFilterDrawer()"></div>
+  <div class="filter-panel">
+    <div class="filter-panel-drag"></div>
+    <div class="fp-label">Status</div>
+    <button class="filter-btn" onclick="mobileFilter('all')">All Contacts <span class="filter-count" id="m-count-all">0</span></button>
+    <button class="filter-btn" onclick="mobileFilter('status:to-contact')"><span class="filter-dot" style="background:var(--text3)"></span>To Contact <span class="filter-count" id="m-count-to-contact">0</span></button>
+    <button class="filter-btn" onclick="mobileFilter('status:contacted')"><span class="filter-dot" style="background:rgba(235,235,245,0.35)"></span>Contacted <span class="filter-count" id="m-count-contacted">0</span></button>
+    <button class="filter-btn" onclick="mobileFilter('status:talking')"><span class="filter-dot" style="background:var(--blue)"></span>Talking <span class="filter-count" id="m-count-talking">0</span></button>
+    <button class="filter-btn" onclick="mobileFilter('status:booked')"><span class="filter-dot" style="background:var(--green)"></span>Booked <span class="filter-count" id="m-count-booked">0</span></button>
+    <button class="filter-btn" onclick="mobileFilter('status:cold')"><span class="filter-dot" style="background:var(--border)"></span>Cold <span class="filter-count" id="m-count-cold">0</span></button>
+    <button class="filter-btn" onclick="mobileFilter('status:network')"><span class="filter-dot" style="background:rgba(191,90,242,0.7)"></span>Network <span class="filter-count" id="m-count-network">0</span></button>
+    <button class="filter-btn" onclick="mobileFilter('status:past-collab')"><span class="filter-dot" style="background:rgba(64,200,224,0.7)"></span>Past Collab <span class="filter-count" id="m-count-past-collab">0</span></button>
+    <button class="filter-btn" onclick="mobileFilter('status:crew')"><span class="filter-dot" style="background:var(--text2)"></span>Crew <span class="filter-count" id="m-count-crew">0</span></button>
+    <div class="sidebar-divider"></div>
+    <div class="fp-label">City</div>
+    <div id="mCityFilters"></div>
+    <div class="sidebar-divider"></div>
+    <div class="fp-label">Data</div>
+    <button class="filter-btn" onclick="exportJSON();closeFilterDrawer()">Backup JSON</button>
+    <label class="filter-btn" style="cursor:pointer">Restore JSON<input type="file" accept=".json" onchange="importJSON(event);closeFilterDrawer()" style="display:none"></label>
+    <button class="filter-btn" onclick="exportCSV();closeFilterDrawer()">Export CSV</button>
+  </div>
+</div>
+
+<!-- DETAIL OVERLAY -->
+<div class="overlay" id="detailOverlay" onclick="handleDetailOverlayClick(event)">
+  <div class="modal" id="detailModal">
+    <div class="modal-drag"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="detailTitle">Contact</div>
+      <button class="modal-close" onclick="closeDetail()">×</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="detailDeleteBtn" onclick="deleteFromDetail()">Delete</button>
+      <button class="btn btn-primary" id="detailEditBtn" onclick="editFromDetail()">Edit Contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT OVERLAY -->
+<div class="overlay" id="editOverlay" onclick="handleEditOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="editTitle">New Contact</div>
+      <button class="modal-close" onclick="closeEditModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="same-company-warning" id="sameCompanyWarning">
+        <span>⚠</span><span id="sameCompanyText"></span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>First Name *</label>
+          <input type="text" id="f-firstname" placeholder="Jane" autocomplete="given-name">
+        </div>
+        <div class="form-group">
+          <label>Last Name *</label>
+          <input type="text" id="f-lastname" placeholder="Smith" autocomplete="family-name">
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <input type="text" id="f-role" placeholder="Head of Production" list="roleList">
+          <datalist id="roleList"></datalist>
+        </div>
+        <div class="form-group">
+          <label>Company</label>
+          <input type="text" id="f-company" placeholder="Agency or production co." list="companyList" oninput="checkSameCompany()">
+          <datalist id="companyList"></datalist>
+        </div>
+        <div class="form-group">
+          <label>City</label>
+          <input type="text" id="f-city" placeholder="Berlin" list="cityList">
+          <datalist id="cityList">
+            <option value="Berlin"><option value="Hamburg"><option value="Munich">
+            <option value="Cologne"><option value="Frankfurt"><option value="Vienna"><option value="Zurich">
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="f-status">
+            <option value="to-contact">To Contact</option>
+            <option value="contacted">Contacted</option>
+            <option value="talking">Talking</option>
+            <option value="booked">Booked</option>
+            <option value="cold">Cold</option>
+            <option value="network">Network</option>
+            <option value="past-collab">Past Collab</option>
+            <option value="crew">Crew</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <div class="email-link-wrap">
+            <input type="email" id="f-email" placeholder="jane@company.com" autocomplete="email">
+            <button class="email-mailto" id="emailMailtoBtn" onclick="openMailto()" title="Open in Mail" style="display:none">
+              <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" id="f-phone" placeholder="+49 000 000 0000" autocomplete="tel">
+        </div>
+        <div class="form-group">
+          <label>Instagram</label>
+          <input type="text" id="f-instagram" placeholder="@username" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>LinkedIn</label>
+          <input type="text" id="f-linkedin" placeholder="linkedin.com/in/…" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Last Contacted</label>
+          <input type="date" id="f-lastcontact">
+        </div>
+        <div class="form-group">
+          <label>Follow-up Date</label>
+          <input type="date" id="f-followup">
+        </div>
+        <div class="form-group full">
+          <label>Notes</label>
+          <textarea id="f-notes" placeholder="How you met, shared projects, personal details…"></textarea>
+        </div>
+      </div>
+
+      <!-- TOGGLE for Multiplicator -->
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <span>Multiplicator</span>
+          <span>This person connects many people</span>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="f-multi">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+
+      <div class="outreach-section" id="outreachSection" style="display:none">
+        <div class="outreach-title">Outreach Log</div>
+        <div id="logEntries"></div>
+        <div class="followup-suggest" id="followupSuggest">
+          <span>Set follow-up in 14 days?</span>
+          <button class="fs-set" onclick="setFollowupIn14()">Set it</button>
+          <button class="fs-dismiss" onclick="dismissFollowupSuggest()">Dismiss</button>
+        </div>
+        <div class="log-add">
+          <input type="text" id="logInput" placeholder="Log a note, call, or email…" onkeydown="if(event.key==='Enter')addLog()">
+          <button class="btn btn-ghost btn-sm" onclick="addLog()">Log</button>
+        </div>
+      </div>
+
+      <!-- PROJECT LOG -->
+      <div class="outreach-section" id="projectSection" style="display:none">
+        <div class="outreach-title">Past Projects</div>
+        <div id="projectEntries"></div>
+        <div class="log-add" style="flex-wrap:wrap;gap:8px">
+          <input type="text" id="projectTitle" placeholder="Project title or client…" style="min-width:0;flex:2">
+          <input type="date" id="projectDate" style="flex:1;min-width:110px">
+          <select id="projectRole" style="flex:1;min-width:110px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;color:var(--text);font-size:16px;font-family:var(--font);outline:none;-webkit-appearance:none">
+            <option value="DP">DP</option>
+            <option value="Director">Director</option>
+            <option value="Dir/DP">Dir/DP</option>
+            <option value="Photo">Photo</option>
+            <option value="Other">Other</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="addProject()" style="white-space:nowrap">Add</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="deleteBtn" onclick="deleteContact()" style="display:none">Delete</button>
+      <button class="btn btn-ghost" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveContact()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- DATA MENU -->
+<div id="dataMenuBack" onclick="hideDataMenu()"></div>
+<div id="dataMenu">
+  <button onclick="exportJSON();hideDataMenu()">Backup JSON</button>
+  <label style="cursor:pointer">Restore JSON<input type="file" accept=".json" onchange="importJSON(event);hideDataMenu()" style="display:none"></label>
+  <button onclick="exportCSV();hideDataMenu()">Export CSV</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let contacts = JSON.parse(localStorage.getItem('fb_contacts') || '[]');
+let currentFilter = 'all';
+let currentView = 'cards';
+let editingId = null;
+let viewingId = null;
+let currentSearch = '';
+
+function save() { localStorage.setItem('fb_contacts', JSON.stringify(contacts)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function statusClass(s) { return {'to-contact':'status-to-contact','contacted':'status-contacted','talking':'status-talking','booked':'status-booked','cold':'status-cold','network':'status-network','past-collab':'status-past-collab','crew':'status-crew'}[s]||'status-to-contact'; }
+function statusLabel(s) { return {'to-contact':'To Contact','contacted':'Contacted','talking':'Talking','booked':'Booked','cold':'Cold','network':'Network','past-collab':'Past Collab','crew':'Crew'}[s]||s; }
+function isOverdue(d) { return d ? new Date(d) < new Date() : false; }
+function fmtDate(d) { if(!d) return ''; return new Date(d+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+function initials(c) { return ((c.firstname||'')[0]||'').toUpperCase() + ((c.lastname||'')[0]||'').toUpperCase(); }
+
+function filterContacts() {
+  let list = [...contacts];
+  const q = currentSearch.toLowerCase();
+  if (q) list = list.filter(c => [c.firstname,c.lastname,c.company,c.role,c.city,c.notes].join(' ').toLowerCase().includes(q));
+  if (currentFilter === 'multiplicator') list = list.filter(c => c.multiplicator);
+  else if (currentFilter === 'followup') list = list.filter(c => c.followup && isOverdue(c.followup));
+  else if (currentFilter.startsWith('status:')) list = list.filter(c => c.status === currentFilter.split(':')[1]);
+  else if (currentFilter.startsWith('city:')) list = list.filter(c => (c.city||'').toLowerCase() === currentFilter.split(':')[1]);
+  else if (currentFilter.startsWith('role:')) list = list.filter(c => (c.role||'').toLowerCase() === currentFilter.split(':')[1]);
+  return list;
+}
+
+function render() {
+  const list = filterContacts();
+  updateCounts(); updateSidebarDynamic(); renderFollowupAlert();
+  document.getElementById('visibleCount').textContent = list.length + (list.length !== 1 ? ' contacts' : ' contact');
+  if (currentView === 'cards') renderCards(list); else renderTable(list);
+  document.getElementById('emptyState').style.display = list.length === 0 ? 'block' : 'none';
+}
+
+function renderCards(list) {
+  const el = document.getElementById('cardsView');
+  el.style.display = 'grid';
+  el.innerHTML = list.map(c => `
+    <div class="contact-card" onclick="openDetail('${c.id}')">
+      <div class="card-top">
+        <div class="card-avatar-wrap">
+          <div class="card-avatar">${initials(c)}${c.multiplicator ? '<div class="card-star-badge">★</div>' : ''}</div>
+        </div>
+        <div class="card-info">
+          <div class="card-name">${c.firstname} ${c.lastname}</div>
+          <div class="card-role">${c.role||'<span style="color:var(--text3)">No role</span>'}</div>
+          <div class="card-company">${c.company||''}</div>
+          ${c.followup ? `<div class="card-followup ${isOverdue(c.followup)?'overdue':''}">${isOverdue(c.followup) ? '⚠ Overdue' : '● ' + fmtDate(c.followup)}</div>` : ''}
+        </div>
+        <div class="card-status-col">
+          ${c.status ? `<span class="tag tag-status ${statusClass(c.status)}">${statusLabel(c.status)}</span>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderTable(list) {
+  document.getElementById('tableBody').innerHTML = list.map(c => `
+    <tr onclick="openDetail('${c.id}')">
+      <td>
+        <div style="font-weight:600">${c.firstname} ${c.lastname}</div>
+        ${c.company ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">${c.company}</div>` : ''}
+      </td>
+      <td>${c.role||'—'}</td><td>${c.company||'—'}</td><td>${c.city||'—'}</td>
+      <td><span class="tag tag-status ${statusClass(c.status)}">${statusLabel(c.status)}</span></td>
+      <td style="color:${c.followup&&isOverdue(c.followup)?'var(--red)':'var(--text2)'}">${fmtDate(c.followup)||'—'}</td>
+      <td>${c.multiplicator?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>':''}</td>
+    </tr>`).join('');
+}
+
+function updateCounts() {
+  document.getElementById('count-all').textContent = contacts.length;
+  document.getElementById('count-multi').textContent = contacts.filter(c => c.multiplicator).length;
+  const od = contacts.filter(c => c.followup && isOverdue(c.followup)).length;
+  document.getElementById('count-followup').textContent = od;
+  const l = document.getElementById('nav-fu-label');
+  if (l) l.textContent = od > 0 ? `Follow-up (${od})` : 'Follow-up';
+  ['to-contact','contacted','talking','booked','cold','network','past-collab','crew'].forEach(s => {
+    const n = contacts.filter(c => c.status === s).length;
+    const a = document.getElementById('count-'+s); if(a) a.textContent = n;
+    const b = document.getElementById('m-count-'+s); if(b) b.textContent = n;
+  });
+  const ma = document.getElementById('m-count-all'); if(ma) ma.textContent = contacts.length;
+}
+
+function updateSidebarDynamic() {
+  const cities = [...new Set(contacts.map(c=>c.city).filter(Boolean))].sort();
+  const cityH = cities.map(city => `
+    <button class="filter-btn ${currentFilter==='city:'+city.toLowerCase()?'active':''}" onclick="setFilter('city:${city.toLowerCase()}',this)">
+      ${city} <span class="filter-count">${contacts.filter(c=>(c.city||'').toLowerCase()===city.toLowerCase()).length}</span>
+    </button>`).join('');
+  document.getElementById('cityFilters').innerHTML = cityH;
+  document.getElementById('mCityFilters').innerHTML = cities.map(city =>
+    `<button class="filter-btn" onclick="mobileFilter('city:${city.toLowerCase()}')">${city} <span class="filter-count">${contacts.filter(c=>(c.city||'').toLowerCase()===city.toLowerCase()).length}</span></button>`
+  ).join('');
+  const roles = [...new Set(contacts.map(c=>c.role).filter(Boolean))].sort();
+  document.getElementById('roleFilters').innerHTML = roles.map(role => `
+    <button class="filter-btn ${currentFilter==='role:'+role.toLowerCase()?'active':''}" onclick="setFilter('role:${role.toLowerCase()}',this)">
+      ${role} <span class="filter-count">${contacts.filter(c=>(c.role||'').toLowerCase()===role.toLowerCase()).length}</span>
+    </button>`).join('');
+  document.getElementById('roleList').innerHTML = roles.map(r=>`<option value="${r}">`).join('');
+  const companies = [...new Set(contacts.map(c=>c.company).filter(Boolean))].sort();
+  document.getElementById('companyList').innerHTML = companies.map(co=>`<option value="${co}">`).join('');
+}
+
+function renderFollowupAlert() {
+  const overdue = contacts.filter(c => c.followup && isOverdue(c.followup));
+  const el = document.getElementById('followupAlert');
+  if (overdue.length > 0) {
+    el.classList.add('visible');
+    document.getElementById('followupNames').innerHTML = overdue.map(c =>
+      `<span class="followup-chip" onclick="openDetail('${c.id}')">${c.firstname} ${c.lastname}</span>`).join('');
+  } else el.classList.remove('visible');
+}
+
+// ── DETAIL VIEW ──────────────────────────────────────────────
+function openDetail(id) {
+  const c = contacts.find(x => x.id === id);
+  if (!c) return;
+  viewingId = id;
+  document.getElementById('detailTitle').textContent = c.firstname + ' ' + c.lastname;
+
+  function row(iconPath, label, value, href) {
+    if (!value) return '';
+    const val = href ? `<a href="${href}" target="_blank">${value}</a>` : value;
+    return `<div class="detail-row">
+      <div class="detail-row-icon"><svg viewBox="0 0 24 24">${iconPath}</svg></div>
+      <div class="detail-row-label">${label}</div>
+      <div class="detail-row-value">${val}</div>
+    </div>`;
+  }
+
+  const iconPerson = '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>';
+  const iconBuilding = '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>';
+  const iconMail = '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>';
+  const iconPhone = '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.13 1 .4 1.97.74 2.9a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6.13 6.13l.97-.97a2 2 0 0 1 2.11-.45c.93.34 1.9.61 2.9.74A2 2 0 0 1 22 16.92z"/>';
+  const iconIG = '<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>';
+  const iconLI = '<path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>';
+  const iconMap = '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>';
+  const iconCal = '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>';
+
+  const emailHref = c.email ? 'mailto:'+c.email : '';
+  const igHref = c.instagram ? ('https://instagram.com/'+c.instagram.replace('@','')) : '';
+  const liHref = c.linkedin ? (c.linkedin.startsWith('http') ? c.linkedin : 'https://'+c.linkedin) : '';
+
+  let html = `
+    <div class="detail-header">
+      <div class="detail-avatar">${initials(c)}</div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="detail-name">${c.firstname} ${c.lastname}</div>
+          ${c.city ? `<span class="tag tag-city" style="display:inline-flex;align-items:center;gap:4px;font-size:12px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${c.city}</span>` : ''}
+        </div>
+        <div class="detail-sub">${[c.role, c.company].filter(Boolean).join(' · ') || '—'}</div>
+      </div>
+    </div>
+    <div class="detail-tags">
+      ${c.status ? `<span class="tag tag-status ${statusClass(c.status)}">${statusLabel(c.status)}</span>` : ''}
+      ${c.multiplicator ? `<span class="tag" style="background:#1a0d2e;color:var(--purple);border:1px solid #2d1a4a;display:inline-flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg> Multiplicator</span>` : ''}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Contact Info</div>
+      <div class="detail-rows">
+        ${row(iconMail, 'Email', c.email, emailHref)}
+        ${row(iconPhone, 'Phone', c.phone, c.phone ? 'tel:'+c.phone : '')}
+        ${row(iconIG, 'Instagram', c.instagram, igHref)}
+        ${row(iconLI, 'LinkedIn', c.linkedin, liHref)}
+        ${row(iconBuilding, 'Company', c.company, '')}
+        ${row(iconPerson, 'Role', c.role, '')}
+      </div>
+    </div>`;
+
+  if (c.lastcontact || c.followup) {
+    html += `<div class="detail-section">
+      <div class="detail-section-title">Outreach</div>
+      <div class="detail-rows">
+        ${c.lastcontact ? row(iconCal, 'Last contact', fmtDate(c.lastcontact), '') : ''}
+        ${c.followup ? `<div class="detail-row">
+          <div class="detail-row-icon"><svg viewBox="0 0 24 24">${iconCal}</svg></div>
+          <div class="detail-row-label">Follow-up</div>
+          <div class="detail-row-value" style="color:${isOverdue(c.followup)?'var(--red)':'var(--text)'}">
+            ${isOverdue(c.followup)?'⚠ Overdue — ':''} ${fmtDate(c.followup)}
+          </div>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  if (c.notes) {
+    html += `<div class="detail-section">
+      <div class="detail-section-title">Notes</div>
+      <div class="detail-notes-box">${c.notes}</div>
+    </div>`;
+  }
+
+  if (c.projects && c.projects.length > 0) {
+    html += `<div class="detail-section">
+      <div class="detail-section-title">Past Projects</div>
+      ${c.projects.slice().reverse().map(p => `
+        <div class="log-entry">
+          <div class="log-date">${fmtDate(p.date)}</div>
+          <div class="log-text"><strong>${p.title}</strong>${p.role ? ' <span style="color:var(--text3)">· '+p.role+'</span>' : ''}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  if (c.log && c.log.length > 0) {
+    html += `<div class="detail-section">
+      <div class="detail-section-title">Outreach Log</div>
+      ${c.log.slice().reverse().map(e => `
+        <div class="log-entry">
+          <div class="log-date">${fmtDate(e.date)}</div>
+          <div class="log-text">${e.text}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  document.getElementById('detailBody').innerHTML = html;
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('open');
+  viewingId = null;
+}
+function handleDetailOverlayClick(e) { if (e.target === document.getElementById('detailOverlay')) closeDetail(); }
+
+function editFromDetail() {
+  const id = viewingId;
+  closeDetail();
+  setTimeout(() => openEditModal(id), 60);
+}
+
+function deleteFromDetail() {
+  if (!viewingId || !confirm('Delete this contact?')) return;
+  contacts = contacts.filter(c => c.id !== viewingId);
+  save(); closeDetail(); render(); showToast('Contact deleted');
+}
+
+// ── EDIT MODAL ──────────────────────────────────────────────
+function openEditModal(id) {
+  editingId = id || null;
+  document.getElementById('editOverlay').classList.add('open');
+  document.getElementById('sameCompanyWarning').classList.remove('visible');
+  document.getElementById('followupSuggest').classList.remove('visible');
+
+  if (id) {
+    const c = contacts.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('editTitle').textContent = 'Edit — ' + c.firstname + ' ' + c.lastname;
+    document.getElementById('deleteBtn').style.display = 'block';
+    document.getElementById('outreachSection').style.display = 'block';
+    document.getElementById('projectSection').style.display = 'block';
+    ['firstname','lastname','role','company','city','email','phone','instagram','linkedin','notes'].forEach(f =>
+      document.getElementById('f-'+f).value = c[f] || '');
+    document.getElementById('f-status').value = c.status || 'to-contact';
+    document.getElementById('f-lastcontact').value = c.lastcontact || '';
+    document.getElementById('f-followup').value = c.followup || '';
+    document.getElementById('f-multi').checked = !!c.multiplicator;
+    document.getElementById('emailMailtoBtn').style.display = c.email ? 'block' : 'none';
+    renderLog(c.log || []);
+    renderProjects(c.projects || []);
+  } else {
+    document.getElementById('editTitle').textContent = 'New Contact';
+    document.getElementById('deleteBtn').style.display = 'none';
+    document.getElementById('outreachSection').style.display = 'block';
+    document.getElementById('projectSection').style.display = 'block';
+    ['firstname','lastname','role','company','city','email','phone','instagram','linkedin','notes'].forEach(f =>
+      document.getElementById('f-'+f).value = '');
+    document.getElementById('f-status').value = 'to-contact';
+    document.getElementById('f-lastcontact').value = '';
+    document.getElementById('f-followup').value = '';
+    document.getElementById('f-multi').checked = false;
+    document.getElementById('emailMailtoBtn').style.display = 'none';
+    document.getElementById('logEntries').innerHTML = '<div style="color:var(--text3);font-size:12px;margin-bottom:6px">No outreach logged yet.</div>';
+    document.getElementById('projectEntries').innerHTML = '<div style="color:var(--text3);font-size:12px;margin-bottom:6px">No projects logged yet.</div>';
+  }
+  setTimeout(() => document.getElementById('f-firstname').focus(), 150);
+}
+
+function closeEditModal() { document.getElementById('editOverlay').classList.remove('open'); editingId = null; }
+function handleEditOverlayClick(e) { if (e.target === document.getElementById('editOverlay')) closeEditModal(); }
+
+function saveContact() {
+  const firstname = document.getElementById('f-firstname').value.trim();
+  const lastname = document.getElementById('f-lastname').value.trim();
+  if (!firstname && !lastname) { alert('Please enter at least a name.'); return; }
+  const data = {
+    firstname, lastname,
+    role: document.getElementById('f-role').value.trim(),
+    company: document.getElementById('f-company').value.trim(),
+    city: document.getElementById('f-city').value.trim(),
+    status: document.getElementById('f-status').value,
+    email: document.getElementById('f-email').value.trim(),
+    phone: document.getElementById('f-phone').value.trim(),
+    instagram: document.getElementById('f-instagram').value.trim(),
+    linkedin: document.getElementById('f-linkedin').value.trim(),
+    lastcontact: document.getElementById('f-lastcontact').value,
+    followup: document.getElementById('f-followup').value,
+    notes: document.getElementById('f-notes').value.trim(),
+    multiplicator: document.getElementById('f-multi').checked,
+  };
+  if (editingId) {
+    const i = contacts.findIndex(c => c.id === editingId);
+    if (i > -1) contacts[i] = { ...contacts[i], ...data };
+  } else {
+    contacts.push({ id: uid(), ...data, log: [], projects: [] });
+  }
+  save(); closeEditModal(); render(); showToast('Contact saved ✓');
+}
+
+function deleteContact() {
+  if (!editingId || !confirm('Delete this contact?')) return;
+  contacts = contacts.filter(c => c.id !== editingId);
+  save(); closeEditModal(); render(); showToast('Contact deleted');
+}
+
+function checkSameCompany() {
+  const company = document.getElementById('f-company').value.trim().toLowerCase();
+  const w = document.getElementById('sameCompanyWarning');
+  if (!company) { w.classList.remove('visible'); return; }
+  const existing = contacts.filter(c =>
+    (c.company||'').toLowerCase() === company &&
+    ['to-contact','contacted','talking'].includes(c.status) &&
+    c.id !== editingId
+  );
+  if (existing.length > 0) {
+    document.getElementById('sameCompanyText').innerHTML =
+      `Active outreach here: ${existing.map(c=>`<strong>${c.firstname} ${c.lastname}</strong> (${statusLabel(c.status)})`).join(', ')}`;
+    w.classList.add('visible');
+  } else w.classList.remove('visible');
+}
+
+document.getElementById('f-email').addEventListener('input', function() {
+  document.getElementById('emailMailtoBtn').style.display = this.value.trim() ? 'block' : 'none';
+});
+function openMailto() { const e=document.getElementById('f-email').value.trim(); if(e) window.location.href='mailto:'+e; }
+
+function renderLog(log) {
+  document.getElementById('logEntries').innerHTML = (log||[]).slice().reverse().map(e =>
+    `<div class="log-entry"><div class="log-date">${fmtDate(e.date)}</div><div class="log-text">${e.text}</div></div>`
+  ).join('') || '<div style="color:var(--text3);font-size:12px;margin-bottom:6px">No outreach logged yet.</div>';
+}
+
+function renderProjects(projects) {
+  document.getElementById('projectEntries').innerHTML = (projects||[]).slice().reverse().map((p,i,arr) =>
+    `<div class="log-entry">
+      <div class="log-date">${fmtDate(p.date)}</div>
+      <div class="log-text"><strong>${p.title}</strong>${p.role ? ' <span style="color:var(--text3)">· '+p.role+'</span>' : ''}</div>
+      <button onclick="removeProject(${arr.length-1-i})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0 4px;touch-action:manipulation">×</button>
+    </div>`
+  ).join('') || '<div style="color:var(--text3);font-size:12px;margin-bottom:6px">No projects logged yet.</div>';
+}
+
+function addProject() {
+  if (!editingId) return;
+  const title = document.getElementById('projectTitle').value.trim();
+  if (!title) return;
+  const date = document.getElementById('projectDate').value || today();
+  const role = document.getElementById('projectRole').value;
+  const i = contacts.findIndex(c=>c.id===editingId); if (i===-1) return;
+  if (!contacts[i].projects) contacts[i].projects = [];
+  contacts[i].projects.push({date, title, role});
+  save(); renderProjects(contacts[i].projects);
+  document.getElementById('projectTitle').value = '';
+  document.getElementById('projectDate').value = '';
+  showToast('Project added');
+}
+
+function removeProject(idx) {
+  if (!editingId) return;
+  const i = contacts.findIndex(c=>c.id===editingId); if (i===-1) return;
+  contacts[i].projects.splice(idx, 1);
+  save(); renderProjects(contacts[i].projects);
+}
+
+function addLog() {
+  if (!editingId) return;
+  const input = document.getElementById('logInput');
+  const text = input.value.trim(); if (!text) return;
+  const i = contacts.findIndex(c => c.id === editingId); if (i === -1) return;
+  if (!contacts[i].log) contacts[i].log = [];
+  contacts[i].log.push({ date: today(), text });
+  contacts[i].lastcontact = today();
+  document.getElementById('f-lastcontact').value = today();
+  save(); renderLog(contacts[i].log); input.value = '';
+  if (!contacts[i].followup) document.getElementById('followupSuggest').classList.add('visible');
+}
+
+function setFollowupIn14() {
+  const d = new Date(); d.setDate(d.getDate()+14);
+  const val = d.toISOString().split('T')[0];
+  document.getElementById('f-followup').value = val;
+  document.getElementById('followupSuggest').classList.remove('visible');
+  showToast('Follow-up set for ' + fmtDate(val));
+}
+function dismissFollowupSuggest() { document.getElementById('followupSuggest').classList.remove('visible'); }
+
+// ── FILTERS / NAV ───────────────────────────────────────────
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const t={'all':'All Contacts','multiplicator':'Multiplicators','followup':'Follow-up Due','status:to-contact':'To Contact','status:contacted':'Contacted','status:talking':'Talking','status:booked':'Booked','status:cold':'Cold','status:network':'Network','status:past-collab':'Past Collab','status:crew':'Crew'};
+  document.getElementById('sectionTitle').textContent = t[filter] || filter.split(':')[1];
+  render();
+}
+function setView(view, btn) {
+  currentView = view;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('cardsView').style.display = view==='cards'?'grid':'none';
+  document.getElementById('tableView').style.display = view==='table'?'table':'none';
+  render();
+}
+function mobileNav(filter, btn) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = filter;
+  const t={'all':'All Contacts','multiplicator':'Multiplicators','followup':'Follow-up Due'};
+  document.getElementById('sectionTitle').textContent = t[filter]||filter;
+  render();
+}
+function openFilterDrawer() { document.getElementById('filterDrawer').classList.add('open'); }
+function closeFilterDrawer() { document.getElementById('filterDrawer').classList.remove('open'); }
+function mobileFilter(filter) {
+  currentFilter = filter;
+  const t={'all':'All Contacts','multiplicator':'Multiplicators','followup':'Follow-up Due','status:to-contact':'To Contact','status:contacted':'Contacted','status:talking':'Talking','status:booked':'Booked','status:cold':'Cold','status:network':'Network','status:past-collab':'Past Collab','status:crew':'Crew'};
+  document.getElementById('sectionTitle').textContent = t[filter]||filter.split(':')[1];
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  closeFilterDrawer(); render();
+}
+
+// ── DATA MENU ───────────────────────────────────────────────
+function showDataMenu() {
+  const btn = document.getElementById('dataMenuBtn').getBoundingClientRect();
+  const m = document.getElementById('dataMenu');
+  m.style.display = 'block';
+  m.style.top = (btn.bottom + 6) + 'px';
+  // align left edge to button left, but never go off-screen left
+  const menuWidth = 190;
+  const rightAligned = window.innerWidth - btn.right;
+  const leftAligned = btn.left;
+  if (btn.right - menuWidth < 8) {
+    m.style.right = 'auto';
+    m.style.left = Math.max(8, leftAligned) + 'px';
+  } else {
+    m.style.left = 'auto';
+    m.style.right = rightAligned + 'px';
+  }
+  document.getElementById('dataMenuBack').style.display = 'block';
+}
+function hideDataMenu() {
+  document.getElementById('dataMenu').style.display = 'none';
+  document.getElementById('dataMenuBack').style.display = 'none';
+}
+
+// ── EXPORT / IMPORT ─────────────────────────────────────────
+function exportCSV() {
+  const fields = ['firstname','lastname','role','company','city','status','email','phone','instagram','linkedin','lastcontact','followup','multiplicator','notes'];
+  const csv = [fields.join(','), ...contacts.map(c => fields.map(f=>'"'+String(c[f]||'').replace(/"/g,'""')+'"').join(','))].join('\n');
+  dl('contacts_'+today()+'.csv','text/csv;charset=utf-8,',csv);
+  showToast('CSV exported');
+}
+function exportJSON() {
+  dl('fb_contacts_backup_'+today()+'.json','application/json,', JSON.stringify({version:1,exported:new Date().toISOString(),contacts},null,2));
+  showToast('Backup saved ✓');
+}
+function importJSON(event) {
+  const file = event.target.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const imp = data.contacts||data;
+      if (!Array.isArray(imp)) throw new Error();
+      if (!confirm(`Import ${imp.length} contacts? This replaces all current data.`)) return;
+      contacts = imp; save(); render(); showToast(`Imported ${imp.length} contacts ✓`);
+    } catch { alert('Invalid backup file.'); }
+  };
+  r.readAsText(file); event.target.value='';
+}
+function dl(name, mime, content) {
+  const a = document.createElement('a');
+  a.href = 'data:'+mime+encodeURIComponent(content); a.download = name; a.click();
+}
+
+// wire both desktop and mobile search inputs
+['searchInput','mobileSearchInput'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', e => {
+    currentSearch = e.target.value;
+    // sync the other field
+    ['searchInput','mobileSearchInput'].forEach(otherId => {
+      if (otherId !== id) {
+        const other = document.getElementById(otherId);
+        if (other) other.value = e.target.value;
+      }
+    });
+    render();
+  });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeDetail(); closeEditModal(); }
+  if ((e.metaKey||e.ctrlKey) && e.key==='k') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+});
+
+// ── SEED DATA (only if localStorage is empty) ───────────────
+if (contacts.length === 0) {
+  contacts = [
+    // CONTACTED — overdue follow-up, multiplicator, full details
+    { id:uid(), firstname:'Julia', lastname:'Hartmann', role:'Head of Production', company:'Scholz & Friends', city:'Berlin', status:'contacted', email:'j.hartmann@scholz-friends.de', phone:'+49 30 2804 0', instagram:'@julia.hartmann', linkedin:'linkedin.com/in/juliahartmann', lastcontact:'2026-05-27', followup:'2026-06-02', multiplicator:true, notes:'Met at a Cannes Lions side event. Works closely with the ECD. Mentioned they\'re looking for a DP for a summer automotive campaign.', log:[{date:'2026-05-27',text:'Sent cold email with reel link. Subject: Julia Hartmann / Reel 2026.'},{date:'2026-05-28',text:'Replied within 24h — interested, asked for rate card.'}], projects:[] },
+
+    // TALKING — active conversation, follow-up upcoming
+    { id:uid(), firstname:'Marcus', lastname:'Breil', role:'Executive Producer', company:'Markenfilm', city:'Hamburg', status:'talking', email:'m.breil@markenfilm.de', phone:'+49 40 432 9900', instagram:'', linkedin:'linkedin.com/in/marcusbreil', lastcontact:'2026-06-01', followup:'2026-06-14', multiplicator:false, notes:'Referred by Julia Hartmann. Currently producing a brand film for a German insurance brand. Tight budget but good creative freedom.', log:[{date:'2026-05-30',text:'First call — 20 min. Good chemistry. Sent treatment examples.'},{date:'2026-06-01',text:'Follow-up email. Confirmed decision by mid-June.'}], projects:[] },
+
+    // TO CONTACT — multiplicator, no phone, Instagram only
+    { id:uid(), firstname:'Sophie', lastname:'Keller', role:'Creative Director', company:'Jung von Matt', city:'Hamburg', status:'to-contact', email:'s.keller@jvm.com', phone:'', instagram:'@sophiekeller.cd', linkedin:'linkedin.com/in/sophiekeller', lastcontact:'', followup:'', multiplicator:true, notes:'Found via Ads of the World — led the Oatly Germany campaign. Very strong visual aesthetic, good fit.', log:[], projects:[] },
+
+    // BOOKED — full log, past projects, no follow-up needed
+    { id:uid(), firstname:'Tobias', lastname:'Wendt', role:'Head of Production', company:'Sehsucht', city:'Berlin', status:'booked', email:'t.wendt@sehsucht.de', phone:'+49 30 6950 3200', instagram:'', linkedin:'linkedin.com/in/tobiaswendt', lastcontact:'2026-05-15', followup:'', multiplicator:false, notes:'Booked for 3-day shoot in July — product film for HelloFresh. Contract signed.', log:[{date:'2026-04-10',text:'Cold email sent.'},{date:'2026-04-18',text:'Call — liked the reel, had a project in mind.'},{date:'2026-05-03',text:'Offer sent.'},{date:'2026-05-15',text:'Contract signed. Shoot: 7–9 July, Berlin studio.'}], projects:[{date:'2025-11-03',title:'Allianz Brand Film',role:'DP'},{date:'2024-06-15',title:'BMW M Series — Social Campaign',role:'Dir/DP'}] },
+
+    // COLD — no response, minimal data
+    { id:uid(), firstname:'Anna', lastname:'Vogel', role:'Brand Manager', company:'Zalando', city:'Berlin', status:'cold', email:'a.vogel@zalando.de', phone:'', instagram:'', linkedin:'linkedin.com/in/annavogel', lastcontact:'2026-02-12', followup:'', multiplicator:false, notes:'Reached out in February. No response after two follow-ups. Archive for now.', log:[{date:'2026-02-04',text:'Cold email sent.'},{date:'2026-02-18',text:'Follow-up — no reply.'}], projects:[] },
+
+    // TO CONTACT — multiplicator, no email yet
+    { id:uid(), firstname:'Nico', lastname:'Strauss', role:'Executive Producer', company:'Stink Films', city:'Berlin', status:'to-contact', email:'n.strauss@stinkfilms.com', phone:'', instagram:'@nicostrauss', linkedin:'', lastcontact:'', followup:'', multiplicator:true, notes:'Very well connected in the Berlin production scene. Has worked with Nike, Adidas, BMW. Priority contact.', log:[], projects:[] },
+
+    // NETWORK — warm contact, long LinkedIn URL
+    { id:uid(), firstname:'Petra', lastname:'Lindemann', role:'Producer', company:'Cobblestone', city:'Hamburg', status:'network', email:'p.lindemann@cobblestone.de', phone:'+49 40 2233 4455', instagram:'@petra.lindemann.film', linkedin:'linkedin.com/in/petralindemann-producer-hamburg', lastcontact:'2026-03-10', followup:'', multiplicator:true, notes:'Know her from the Heimat Berlin job in 2024. Very warm, always happy to connect people. Goes to every Hamburg industry event.', log:[{date:'2026-03-10',text:'Coffee in Altona — she offered to intro me to her contact at Grabarz & Partner.'}], projects:[{date:'2024-09-12',title:'Heimat Berlin — Otto Campaign',role:'DP'}] },
+
+    // PAST COLLAB — worked together, no current outreach
+    { id:uid(), firstname:'Leon', lastname:'Baumann', role:'1st AC', company:'Freelance', city:'Berlin', status:'past-collab', email:'leon.baumann@gmail.com', phone:'+49 171 555 8823', instagram:'@leonbaumann.ac', linkedin:'', lastcontact:'2026-04-20', followup:'', multiplicator:false, notes:'Worked together on 4 jobs. Reliable, fast, great eye. Always available last minute. Recommended by Tobias Wendt.', log:[], projects:[{date:'2026-04-20',title:'HelloFresh — Spring Campaign',role:'Dir/DP'},{date:'2025-11-03',title:'Allianz Brand Film',role:'DP'},{date:'2025-06-14',title:'AboutYou — Summer Lookbook',role:'DP'}] },
+
+    // CREW — gaffer, no status color, minimal outreach info
+    { id:uid(), firstname:'Katrin', lastname:'Möller', role:'Gaffer', company:'Freelance', city:'Berlin', status:'crew', email:'k.moeller.gaffer@gmail.com', phone:'+49 162 334 7711', instagram:'', linkedin:'', lastcontact:'2026-04-20', followup:'', multiplicator:false, notes:'Best gaffer I\'ve worked with in Berlin. Knows exactly how to work fast in tight spaces. Book early — always busy.', log:[], projects:[{date:'2026-04-20',title:'HelloFresh — Spring Campaign',role:'DP'},{date:'2025-06-14',title:'AboutYou — Summer Lookbook',role:'DP'}] },
+
+    // CREW — AC in Hamburg, no Instagram
+    { id:uid(), firstname:'Fabian', lastname:'Koch', role:'1st AC', company:'Freelance', city:'Hamburg', status:'crew', email:'fabian.koch.ac@protonmail.com', phone:'+49 176 991 2234', instagram:'', linkedin:'linkedin.com/in/fabiankoch-ac', lastcontact:'2025-12-05', followup:'', multiplicator:false, notes:'Met on a Markenfilm job. Very clean and quiet on set. Good with vintage glass.', log:[], projects:[{date:'2025-12-05',title:'Markenfilm — Volkswagen Spot',role:'DP'}] },
+
+    // NETWORK — Munich contact, no email yet
+    { id:uid(), firstname:'Sandra', lastname:'Weber', role:'Executive Producer', company:'Parasol Island', city:'Munich', status:'network', email:'', phone:'', instagram:'@sandraweber.ep', linkedin:'linkedin.com/in/sandraweberep', lastcontact:'2026-01-22', followup:'', multiplicator:true, notes:'Met at Berlinale industry dinner. Does a lot of international co-productions. Said to reach out when I have a strong treatment ready.', log:[{date:'2026-01-22',text:'Brief chat at dinner — she liked the Zalando reel. Get her email via LinkedIn.'}], projects:[] },
+
+    // PAST COLLAB — color grader, long Instagram handle
+    { id:uid(), firstname:'Moritz', lastname:'Schubert', role:'Colorist', company:'Lichtblick Post', city:'Berlin', status:'past-collab', email:'moritz@lichtblick-post.de', phone:'+49 30 8877 2200', instagram:'@moritz.schubert.color.grading.berlin', linkedin:'linkedin.com/in/moritzschubert', lastcontact:'2026-05-01', followup:'', multiplicator:false, notes:'Go-to colorist for all commercial work. Understands my aesthetic immediately. Lichtblick has great infrastructure for remote sessions too.', log:[], projects:[{date:'2026-04-20',title:'HelloFresh — Spring Campaign',role:'Dir/DP'},{date:'2025-11-03',title:'Allianz Brand Film',role:'DP'},{date:'2025-06-14',title:'AboutYou — Summer Lookbook',role:'DP'},{date:'2024-09-12',title:'Heimat Berlin — Otto Campaign',role:'DP'}] },
+
+    // CONTACTED — no follow-up set yet, Munich
+    { id:uid(), firstname:'Daniel', lastname:'Richter', role:'Head of Production', company:'Thjnk', city:'Hamburg', status:'contacted', email:'d.richter@thjnk.de', phone:'', instagram:'', linkedin:'linkedin.com/in/danielrichter-thjnk', lastcontact:'2026-06-03', followup:'', multiplicator:false, notes:'Found via Adforum — led production on the DHL rebrand campaign. Clean, restrained visual style.', log:[{date:'2026-06-03',text:'Sent cold email, referenced DHL campaign specifically.'}], projects:[] }
+  ];
+
+  save();
+}
+
+render();
+</script>
+</body>
+</html>
